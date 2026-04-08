@@ -20,8 +20,10 @@ def run_waterflow(scanned_elev, env, **kwargs):
         env=env,
     )
 
-    #erosion modeling
-    #Note: first install addon r.divergence using g.extension
+    # erosion modeling
+    # Note: first install addon r.divergence using g.extension
+
+
 def run_usped(scanned_elev, env, **kwargs):
     gs.run_command(
         "r.slope.aspect",
