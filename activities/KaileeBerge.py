@@ -2,6 +2,8 @@ import os
 
 import grass.script as gs
 
+# scan rasters here
+
 
 def run_waterflow(scanned_elev, env, **kwargs):
     # first compute x- and y-derivatives
@@ -85,6 +87,62 @@ def run_usped(scanned_elev, env, **kwargs):
     )
 
 
+def run_probability(erosion_deposition, flow, env, **kwargs):
+    # coefficients I would obtain from CH1
+    b0 = -2.0  # intercept
+    b1 = -0.5  # erosion/deposition
+    b2 = 0.8  # flow
+
+    # logistic transformation
+    gs.mapcalc(
+        f"""
+        probabilitySurface = 1.0 / (1.0 + exp(-({b0} +{b1} * {erosion_deposition} + {b2} * {flow}
+        )))
+        """,
+        env=env,
+    )
+    colors = [
+        "0 white",
+        "0.25 lightblue",
+        "0.5 yellow",
+        "0.75 orange",
+        "1 red",
+    ]
+    gs.write_command(
+        "r.colors",
+        map="probabilitySurface",
+        rules="-",
+        stdin="\n".join(colors),
+        env=env,
+    )
+
+
+# someone places a pin to make a guess
+# return the probabilty of a species at pin
+def get_probability_at_pin(pin_vector, env, **kwargs):
+    # Query raster value at point(s)
+    result = gs.read_command(
+        "r.what",
+        map="probabilitySurface",
+        points=pin_vector,
+        env=env,
+    )
+
+    # r.what returns text; parse the probability value
+    # Format: east|north|value
+    values = []
+    for line in result.strip().split("\n"):
+        parts = line.split("|")
+        if len(parts) >= 3:
+            values.append(float(parts[2]))
+
+    return values
+
+
+# someone places a pin to make a guess
+# return the probabilty of a species at pin
+
+
 def main():
     env = os.environ.copy()
     env["GRASS_OVERWRITE"] = "1"
@@ -95,6 +153,8 @@ def main():
 
     run_waterflow(scanned_elev=elev_resampled, env=env)
     run_usped(scanned_elev=elev_resampled, env=env)
+
+    run_probability(erosion_deposition="erosion_deposition", flow="flow", env=env)
 
 
 if __name__ == "__main__":

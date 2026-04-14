@@ -2,7 +2,7 @@
   "tasks": [
     {
       "layers": [
-        ["d.rast", "map=erosion_deposition"], 
+        ["d.rast", "map=erosion_deposition"],
         ["d.rast", "map=flow", "values=0.1-100"]
       ],
       "base": "elev_lid792_1m",
@@ -13,9 +13,9 @@
         "interpolate": true
       },
       "analyses": "KaileeBerge.py",
-      "title": "Waterflow Test",
+      "title": "Finding the Aquatic Critters",
       "author": "Kailee Berge",
-      "instructions": "Change topography and observe changes in waterflow and erosion"
+      "instructions": "Change topography and observe changes in waterflow and erosion. Use this to guess where our critters occur"
     }
   ]
 }
