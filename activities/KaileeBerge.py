@@ -85,7 +85,9 @@ def run_usped(scanned_elev, env, **kwargs):
     )
 
 
-def run_probability(erosion_deposition, flow, env, **kwargs):
+def run_probability(
+    env, erosion_deposition="erosion_deposition", flow="flow", **kwargs
+):
     # coefficients I would obtain from CH1
     b0 = -2.0  # intercept
     b1 = -0.5  # erosion/deposition
@@ -93,19 +95,10 @@ def run_probability(erosion_deposition, flow, env, **kwargs):
 
     # logistic transformation
     gs.mapcalc(
-        f"""
-        probabilitySurface = 1.0 / (1.0 + exp(-({b0} +{b1} * {erosion_deposition} + {b2} * {flow}
-        )))
-        """,
+        f"""probabilitySurface = 1 / (1 + exp(-({b0} + {b1} * {erosion_deposition}+ {b2} * {flow})))""",
         env=env,
     )
-    colors = [
-        "0 white",
-        "0.25 lightblue",
-        "0.5 yellow",
-        "0.75 orange",
-        "1 red",
-    ]
+    colors = ["0 white", "0.25 blue", "0.5 yellow", "0.75 orange", "1 red"]
     gs.write_command(
         "r.colors",
         map="probabilitySurface",
@@ -119,7 +112,7 @@ def run_probability(erosion_deposition, flow, env, **kwargs):
 # return the probabilty of a species at pin
 
 
-def run_function_with_points(scanned_elev, env, points=None, **kwargs):
+def run_function_with_points(scanned_elev, eventHandler, env, points=None, **kwargs):
     """Doesn't do anything, except loading points from a vector map to Python
 
     If *points* is provided, the function assumes it is name of an existing vector map.
@@ -131,6 +124,7 @@ def run_function_with_points(scanned_elev, env, points=None, **kwargs):
         # a change in the surface.
         points = "points"
         import analyses
+        from activities import updateDisplay
 
         analyses.change_detection(
             "scan_saved",
@@ -144,35 +138,38 @@ def run_function_with_points(scanned_elev, env, points=None, **kwargs):
             env=env,
         )
     # Output point coordinates from GRASS GIS and read coordinates into a Python list.
-    point_list = []
-    data = (
-        gs.read_command(
-            "v.out.ascii",
-            input=points,
-            type="point",
-            format="point",
-            separator="comma",
-            env=env,
-        )
-        .strip()
-        .splitlines()
+    # point_list = []
+    # data = (
+    #     gs.read_command(
+    #         "v.out.ascii",
+    #         input=points,
+    #         type="point",
+    #         format="point",
+    #         separator="comma",
+    #         env=env,
+    #     )
+    #     .strip()
+    #     .splitlines()
+    # )
+    # if len(data) < 1:
+    #     # For the cases when the analysis expects at least 2 points, we check the
+    #     # number of points and return from the function if there is less than 2
+    #     # points. (No points is a perfectly valid state in Tangible Landscape,
+    #     # so we need to deal with it here.)
+    #     return
+    # for point in data:
+    #     point_list.append([float(p) for p in point.split(",")][:2])
+
+    output = gs.read_command(
+        "r.what",
+        map="probabilitySurface",
+        points=points,
+        env=env,
     )
-    if len(data) < 2:
-        # For the cases when the analysis expects at least 2 points, we check the
-        # number of points and return from the function if there is less than 2
-        # points. (No points is a perfectly valid state in Tangible Landscape,
-        # so we need to deal with it here.)
-        return
-    for point in data:
-        point_list.append([float(p) for p in point.split(",")][:2])
 
-
-gs.read_command(
-    "r.what",
-    map="probabilitySurface",
-    points=points,
-    env=env,
-)
+    # update dashboard
+    event = updateDisplay(value=output)
+    eventHandler.postEvent(receiver=eventHandler.activities_panel, event=event)
 
 
 def main():
