@@ -5,23 +5,36 @@ import os
 import grass.script as gs
 
 
-def run_viewshed(scanned_elev, env, points=None, **kwargs):
+def run_contours(scanned_elev, env, **kwargs):
+    interval = 2
+    gs.run_command(
+        "r.contour",
+        input=kwargs["scanned_calib_elev"],
+        output="contours",
+        step=interval,
+        flags="t",
+        env=env,
+    )
 
+
+def run_viewshed(scanned_elev, env, points=None, **kwargs):
+    viewshed_surface = scanned_elev
     if not points:
         points = "points"
         import analyses
 
         analyses.change_detection(
-            "scan_saved",
+            kwargs["scanned_calib_elev"],
             scanned_elev,
             points,
             height_threshold=[10, 100],
             cells_threshold=[5, 50],
             add=True,
-            max_detected=5,
+            max_detected=1,
             debug=True,
             env=env,
         )
+        viewshed_surface = kwargs["scanned_calib_elev"]
 
     data = (
         gs.read_command(
@@ -36,7 +49,7 @@ def run_viewshed(scanned_elev, env, points=None, **kwargs):
         .splitlines()
     )
 
-    if len(data) < 2:
+    if len(data) < 1:
         # For the cases when the analysis expects at least 2 points, we check the
         # number of points and return from the function if there is less than 2
         # points. (No points is a perfectly valid state in Tangible Landscape,
@@ -48,9 +61,10 @@ def run_viewshed(scanned_elev, env, points=None, **kwargs):
 
     gs.run_command(
         "r.viewshed",
-        input=scanned_elev,
+        input=viewshed_surface,
         output="viewshed",
         coordinates=f"{x},{y}",
+        flags="e",
         env=env,
     )
 
